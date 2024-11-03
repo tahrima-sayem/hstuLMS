@@ -47,7 +47,7 @@
                         <td class="px-6 py-4">
                             <form action="{{ route('updateexamMarks') }}" method="POST">
                                 @csrf
-                                <input type="hidden" name="student_id" value="{{ $result->student_id }}">
+                                <input type="hidden" name="student_id" value="{{ $result->id }}">
                                 <input type="hidden" name="exam_id" value="{{ $result->exam_id }}">
                                 <input type="hidden" name="course_id" value="{{ $result->course_id }}">
                                 <input type="number" name="marks" step="1" min="0" max="100"

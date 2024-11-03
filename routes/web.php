@@ -71,7 +71,8 @@ Route::get('/course-details/result-processing', [TeacherController::class, 'goto
 
 //Assignment assesment
 Route::get('/assignment-assesments/{assignment_id}/{index}',[TeacherController::class,'gototeacherCourseAssignmentAssesment'])->name('gototeacherCourseAssignmentAssesment')->middleware(TeacherMiddleware::class);
-Route::post('/upload-marks/{solution_id}', [TeacherController::class, 'uploadMarks'])->name('uploadMarks');
+Route::post('/teacher/upload-mark', [TeacherController::class, 'uploadAssignmentMark'])->name('uploadAssignmentMark');
+
 
 
 //Display Course Labwork

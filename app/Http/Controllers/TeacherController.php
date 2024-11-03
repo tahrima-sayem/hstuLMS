@@ -146,22 +146,48 @@ class TeacherController extends Controller
             ->get();
 
         // Fetch the solutions for the specific assignment
-        $solutions = SolutionAssignment::select(
-            'students.s_id as student_id',
-            'solution_assignment.student_id as s_id',
-            'users.fullname',
-            'assignments.title',
-            'solution_assignment.mark',
-            'solution_assignment.file'
-        )
-            ->join('assignments', 'solution_assignment.assignment_id', '=', 'assignments.id')
-            ->join('students', 'solution_assignment.student_id', '=', 'students.id')
-            ->join('users', 'students.user_id', '=', 'users.id')
-            ->where('solution_assignment.assignment_id', $assignment_id)
+        $solutions = DB::table('solution_assignment as sa')
+            ->join('assignments as a', 'sa.assignment_id', '=', 'a.id')
+            ->join('students as s', 'sa.student_id', '=', 's.id')
+            ->join('users as u', 's.user_id', '=', 'u.id')
+            ->select('s.s_id', 'sa.student_id', 'a.title', 'sa.file', 'sa.mark', 'u.fullname', 'sa.course_id')
+            ->where('sa.assignment_id', $assignment_id)
             ->get();
 
         return view('teachers.teacherCourseAssignmentAsses', compact('assignments', 'distributions', 'index', 'solutions'));
     }
+
+    public function uploadAssignmentMark(Request $request)
+    {
+        $request->validate([
+            'student_id' => 'required|exists:students,id',
+            'assignment_id' => 'required|exists:assignments,id',
+            'course_id' => 'required|exists:courses,id',
+            'marks' => 'required|integer|min:0|max:100',
+        ]);
+
+        // Find the existing solution assignment record
+        $solution = DB::table('solution_assignment')
+            ->where('student_id', $request->student_id)
+            ->where('assignment_id', $request->assignment_id)
+            ->where('course_id', $request->course_id)
+            ->first();
+
+        // Check if the solution exists
+        if ($solution) {
+            // Update the mark for the respective solution
+            DB::table('solution_assignment')
+                ->where('student_id', $request->student_id)
+                ->where('assignment_id', $request->assignment_id)
+                ->where('course_id', $request->course_id)
+                ->update(['mark' => $request->marks]);
+
+            return redirect()->back()->with('success', 'Marks successfully uploaded!');
+        } else {
+            return redirect()->back()->with('error', 'Solution not found.');
+        }
+    }
+
     public function gototeacherCourseLabworkAssesment($labwork_id, $index)
     {
         $labworks = Labwork::select('id', 'title', 'course_id')
@@ -370,37 +396,37 @@ class TeacherController extends Controller
     }
     public function gototeacherCourseResultProcess()
     {
-        $course_id=9;
+        $course_id = 9;
         $distributions = Distribution::where('course_id', $course_id)
             ->with('course')
             ->get();
 
-            $results = Student::select(
-                'students.Id as student_id',
-                DB::raw('(SUM(CASE WHEN attendence.attendance_status = 1 THEN 1 ELSE 0 END) / COUNT(attendence.id)) * 100 AS attendance_percentage'),
-                DB::raw('AVG(solution_assignment.mark) AS average_assignment_marks'),
-                DB::raw('AVG(solution_labwork.mark) AS average_labwork_marks'),
-                DB::raw('AVG(CASE WHEN exam.category = "quiz" THEN exam_mark.mark END) AS average_quiz_marks'),
-                DB::raw('AVG(CASE WHEN exam.category = "mid" THEN exam_mark.mark END) AS average_mid_marks')
-            )
+        $results = Student::select(
+            'students.Id as student_id',
+            DB::raw('(SUM(CASE WHEN attendence.attendance_status = 1 THEN 1 ELSE 0 END) / COUNT(attendence.id)) * 100 AS attendance_percentage'),
+            DB::raw('AVG(solution_assignment.mark) AS average_assignment_marks'),
+            DB::raw('AVG(solution_labwork.mark) AS average_labwork_marks'),
+            DB::raw('AVG(CASE WHEN exam.category = "quiz" THEN exam_mark.mark END) AS average_quiz_marks'),
+            DB::raw('AVG(CASE WHEN exam.category = "mid" THEN exam_mark.mark END) AS average_mid_marks')
+        )
             ->leftJoin('attendence', 'students.Id', '=', 'attendence.student_id')
-            ->leftJoin('solution_assignment', function($join) use ($course_id) {
+            ->leftJoin('solution_assignment', function ($join) use ($course_id) {
                 $join->on('students.Id', '=', 'solution_assignment.student_id')
-                     ->where('solution_assignment.course_id', $course_id);
+                    ->where('solution_assignment.course_id', $course_id);
             })
-            ->leftJoin('solution_labwork', function($join) use ($course_id) {
+            ->leftJoin('solution_labwork', function ($join) use ($course_id) {
                 $join->on('students.Id', '=', 'solution_labwork.student_id')
-                     ->where('solution_labwork.course_id', $course_id);
+                    ->where('solution_labwork.course_id', $course_id);
             })
             ->leftJoin('exam_mark', 'students.Id', '=', 'exam_mark.student_id')
-            ->leftJoin('exam', function($join) use ($course_id) {
+            ->leftJoin('exam', function ($join) use ($course_id) {
                 $join->on('exam_mark.exam_id', '=', 'exam.Id')
-                     ->where('exam.course_id', $course_id);
+                    ->where('exam.course_id', $course_id);
             })
             ->groupBy('students.Id')
             ->get();
 
-        return view('teachers.teacherCourseResultProcessing', compact('distributions','results'));
+        return view('teachers.teacherCourseResultProcessing', compact('distributions', 'results'));
     }
     public function gototeacherCourseStudentList($course_id)
     {
@@ -436,6 +462,7 @@ class TeacherController extends Controller
             ->join('users', 'students.user_id', '=', 'users.id')
             ->select(
                 'students.s_id as student_id',
+                'students.id as id',
                 'exam_mark.student_id as s_id',
                 'users.fullname',
                 'exam.syllabus',

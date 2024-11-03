@@ -45,7 +45,7 @@
                         </td>
                         <td class="px-6 py-4">
                             @if($solution->file)
-                                <a href="{{ asset('storage/' . $solution->file) }}" class="text-green-600 hover:text-green-600"
+                                <a href="" class="text-green-600 hover:text-green-600"
                                     download>
                                     <p>Download</p>
                                     <i class="fas fa-download"></i>
@@ -55,7 +55,7 @@
                             @endif
                         </td>
                         <td class="px-6 py-4">
-                            <form action="{{ route('your.upload.route', $solution->id) }}" method="POST">
+                            <form action="" method="POST">
                                 @csrf
                                 <input type="number" name="marks" step="1" min="0" max="100"
                                     onkeydown="return event.key !== 'e'" placeholder="0 - 100" />
